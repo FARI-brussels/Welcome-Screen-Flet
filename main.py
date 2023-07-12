@@ -626,5 +626,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     STRAPI_ID = int(args.id)
 
-    ft.app(target=main, port=8550, assets_dir="assets")
+    ft.app(target=main,  view=ft.WEB_BROWSER, port=8550, assets_dir="assets")
     
