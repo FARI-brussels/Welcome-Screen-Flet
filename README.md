@@ -1,5 +1,5 @@
 # FARI - General welcome screen
-⚠️⚠️⚠️ Legacy version, only used for the visual question answering demo from AIlab because the website that host the demo (on ailab infrastructure) does not accept being embeded as an iframe (as the new version of the welcome screen requires)
+⚠️⚠️⚠️ Legacy version : only used for the visual question answering demo from AIlab. Indeed, the website that hosts the demo (on ailab infrastructure) does not accept being embeded as an iframe (as the new version of the welcome screen requires)
 ## Install
 ```
 pip install -r requirements.txt
