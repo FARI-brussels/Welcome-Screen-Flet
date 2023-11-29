@@ -13,5 +13,5 @@ pip install -r requirements.txt
 
 - Then, run the Welcome page where *x* is the ID of the desired Welcome page (see below). 
 ```
-python3 main.py --scrapi_id x
+python3 main.py --id x
 ```
