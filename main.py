@@ -1,134 +1,126 @@
 import flet as ft
-from flet import RoundedRectangleBorder
-from flet import BorderSide
-from fletcarousel import BasicHorizontalCarousel, AutoCycle
-
-import requests
-import argparse
-import time, threading
-
+from flet import RoundedRectangleBorder, BorderSide
+from fletcarousel import BasicHorizontalCarousel
 from screeninfo import get_monitors
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+import requests
+import argparse
 
-global language, driver, imageURL, appURL, STRAPI_ID, current_route, lst_image_caroussel, lst_image_sdg
-STRAPI_URL = "http://46.226.110.124:1337/"
-#STRAPI_ID = 2 # (0:ANIMAL, 1:VQA, 2:ETRO) index of the current project
-language="EN"
+global language, driver, imageURL, appURL, DEMO_ID, current_route, lst_image_caroussel, lst_image_sdg
+DIRECTUS_URL = "https://fari-cms.directus.app"
+language = "en"
 driver = None
-lst_image_caroussel = []; lst_image_sdg = []
+lst_image_caroussel = []
+lst_image_sdg = []
 
 
-def main(page: ft.Page):    # check if no mouse click from the user
-    """
-    Set of main GUI elements that requiered to be dynamic
-    """
+def main(page: ft.Page):
     txt_title = ft.Text(value="", color="#2250c6", size=45, font_family="Rhetorik", width=700)
     txt_title_w = ft.Text(value="", color="#ffffff", size=45, font_family="Rhetorik", width=700)
-    txt_topic = ft.Text(value="",color="#65C0B5", size=16, font_family="Plain")
-    txt_research_head = ft.Text(value="",color="#000000", size=12, font_family="Plain")
-    txt_research_lead = ft.Text(value="",color="#000000", size=12, font_family="Plain")
+    txt_topic = ft.Text(value="", color="#65C0B5", size=16, font_family="Plain")
+    txt_research_head = ft.Text(value="", color="#000000", size=12, font_family="Plain")
+    txt_research_lead = ft.Text(value="", color="#000000", size=12, font_family="Plain")
     txt_explain1 = ft.Text(value="", color="#1A202C", font_family="Plain", size=14, width=700)
     txt_start_demo = ft.Text(value="", color="#ffffff", size=28, font_family="Plain")
-    txt_explain2 = ft.Text(width=700,value="", color="#ffffff", font_family="Plain", size=14)
+    txt_explain2 = ft.Text(width=700, value="", color="#ffffff", font_family="Plain", size=14)
     txt_learnmore = ft.ElevatedButton(
-                        text="",
-                        icon=ft.icons.LINK_ROUNDED,
-                        icon_color="#ffffff",
-                        on_click=lambda _: more(_),
-                        style=
-                        ft.ButtonStyle(
-                            color="#ffffff",
-                            padding=10,
-                            bgcolor={ft.MaterialState.DEFAULT: "#2153d1", ft.MaterialState.HOVERED: ft.colors.BLUE},
-                            side={
-                                ft.MaterialState.DEFAULT: BorderSide(1, ft.colors.BLUE),
-                                ft.MaterialState.HOVERED: BorderSide(2, ft.colors.BLUE),
-                            },
-                            overlay_color=ft.colors.TRANSPARENT,
-                            elevation={"pressed": 0, "": 1},
-                            animation_duration=500,
-                            shape={
-                                ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
-                            },
+        text="",
+        icon=ft.icons.LINK_ROUNDED,
+        icon_color="#ffffff",
+        on_click=lambda _: more(_),
+        style=ft.ButtonStyle(
+            color="#ffffff",
+            padding=10,
+            bgcolor={ft.MaterialState.DEFAULT: "#2153d1", ft.MaterialState.HOVERED: ft.colors.BLUE},
+            side={
+                ft.MaterialState.DEFAULT: BorderSide(1, ft.colors.BLUE),
+                ft.MaterialState.HOVERED: BorderSide(2, ft.colors.BLUE),
+            },
+            overlay_color=ft.colors.TRANSPARENT,
+            elevation={"pressed": 0, "": 1},
+            animation_duration=500,
+            shape={
+                ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
+            },
+        ),
+    )
+
+    def changeText():
+        """Change the text language based on a given input string (en, nl or fr)"""
+        global language, imageURL, appURL, DIRECTUS_URL, lst_image_caroussel, lst_image_sdg
+        
+        print("[+] Getting data from Directus")
+        url = f"{DIRECTUS_URL}/items/demos"
+        params = {
+            "fields": "*.*",  # Fetch all fields including translations
+        }
+        
+        response = requests.get(url, params=params)
+        if not response.ok:
+            print(f"Error fetching data: {response.status_code}")
+            return
+            
+        response_json = response.json()
+        
+        demo_content = next((demo for demo in response_json['data'] if demo['id'] == DEMO_ID), None)
+        if not demo_content:
+            print(f"Demo with ID {DEMO_ID} not found")
+            return
+
+        # Update text content based on language
+        translations = demo_content.get('translations', [])
+        print(language)
+        current_translation = next((t for t in translations if t['languages_code'] == language), None)
+        
+        if current_translation:
+            txt_title.value = current_translation.get('title', '')
+            txt_title_w.value = current_translation.get('title', '')
+            txt_topic.value = current_translation.get('topic', '')
+            txt_explain1.value = current_translation.get('description', '')
+            txt_start_demo.value = "start demo"
+            txt_explain2.value = ""
+            txt_learnmore.text = "learn more"
+            txt_research_head.value = demo_content.get('research_head', '')
+            txt_research_lead.value = demo_content.get('research_lead', '')
+
+        # Update app URL and images
+        appURL = current_translation.get('app_url', '')
+        print(demo_content)
+        # Handle main image
+        if 'image' in demo_content and demo_content['image']:
+            imageURL = f"{DIRECTUS_URL}/assets/{demo_content['image']['id']}"
+            print(imageURL)
+        # Handle carousel images
+        if 'logos' in demo_content:
+            for logo in demo_content['logos']:
+                carousel_img_url = f"{DIRECTUS_URL}/assets/{logo['directus_files_id']}"
+                print(carousel_img_url)
+                lst_image_caroussel.append(
+                    ft.Container(
+                        height=50,
+                        width=300,
+                        content=ft.Image(
+                            src=carousel_img_url,
+                            fit=ft.ImageFit.FIT_HEIGHT,
+                            color="#c5c5c5",
+                            height=50,
                         ),
                     )
-    
-    """
-    Set of main functions
-    """    
-    def changeText():
-        """Change the text language based on a given input string (EN, NL or FR)
-        """
-        global language, imageURL, appURL, STRAPI_URL, lst_image_caroussel, lst_image_sdg
-        url = STRAPI_URL + "demos/"
-        
-        print("[+] Getting data from STRAPI")
-        if(language=="EN"):
-            url = STRAPI_URL + "api/demos?locale=en"
-        elif(language=="NL"):
-            url = STRAPI_URL + "api/demos?locale=nl"
-        elif(language=="FR"):
-            url = STRAPI_URL + "api/demos?locale=fr-FR"
-
-        
-        response = requests.get(url) # Call the STRAPI API        
-        response_json = response.json()
-
-        # TEXT
-        txt_title.value = response_json["data"][STRAPI_ID]["attributes"]["title"]
-        txt_title_w.value = response_json["data"][STRAPI_ID]["attributes"]["title"]
-        txt_topic.value = response_json["data"][STRAPI_ID]["attributes"]["topic"]
-        txt_explain1.value = response_json["data"][STRAPI_ID]["attributes"]["explanation_short"]
-        txt_start_demo.value = response_json["data"][STRAPI_ID]["attributes"]["button_demo_start"]
-        txt_explain2.value = response_json["data"][STRAPI_ID]["attributes"]["explanation"]
-        txt_learnmore.text = response_json["data"][STRAPI_ID]["attributes"]["learn_more"]
-        txt_research_head.value = response_json["data"][STRAPI_ID]["attributes"]["research_head"]
-        txt_research_lead.value = response_json["data"][STRAPI_ID]["attributes"]["research_lead"]
-        
-        # APP URL
-        appURL = response_json["data"][STRAPI_ID]["attributes"]["appURL"]
-        # IMAGE
-        url_img = STRAPI_URL + "api/demos?populate=*"
-        response = requests.get(url_img) # Call the STRAPI API
-        response_json = response.json()
-        try:
-            imageURL = STRAPI_URL[:-1] + response_json["data"][STRAPI_ID]["attributes"]["image"]["data"]["attributes"]["formats"]["medium"]["url"]
-        except:
-            imageURL = STRAPI_URL[:-1] + response_json["data"][STRAPI_ID]["attributes"]["image"]["data"]["attributes"]["url"]
-
-        # IMAGES CAROUSSEL
-        if(len(lst_image_caroussel)==0):
-            lenght_caroussel = len(response_json["data"][STRAPI_ID]["attributes"]["caroussel"]["data"])
-            for i in range(0, lenght_caroussel):
-                urlimg = STRAPI_URL[:-1] + response_json["data"][STRAPI_ID]["attributes"]["caroussel"]["data"][i]["attributes"]["url"]
-                lst_image_caroussel.append(ft.Container(
-                    height=50,
-                    width=300,
-                    content=
-                    ft.Image(
-                        src=urlimg,
-                        fit=ft.ImageFit.FIT_HEIGHT,
-                        color="#c5c5c5",
-                        height=50,
-                    ),
-                    )
                 )
-        # IMAGES SDG
-        if(len(lst_image_sdg)==0):
-            lenght_sdg = len(response_json["data"][STRAPI_ID]["attributes"]["images_sdg"]["data"])
-            for i in range(0, lenght_sdg):
-                urlimg = STRAPI_URL[:-1] + response_json["data"][STRAPI_ID]["attributes"]["images_sdg"]["data"][i]["attributes"]["url"]
+
+        # Handle SDG images
+        if 'sdg_images' in demo_content:
+            for sdg in demo_content['sdg_images']:
+                sdg_img_url = f"{DIRECTUS_URL}/assets/{sdg['directus_files_id']}"
                 lst_image_sdg.append(
                     ft.Image(
-                        src=urlimg,
+                        src=sdg_img_url,
                         fit=ft.ImageFit.FIT_HEIGHT,
                         height=40,
-                    ),
-                    
+                    )
                 )
-        
-        
+
 
     def loadLang():
         """Base on the value of the global var 'language', it load the set of text in the correct language
@@ -279,7 +271,7 @@ def main(page: ft.Page):    # check if no mouse click from the user
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "EN",
+                                                    data = "en",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                                 ft.OutlinedButton(
@@ -316,7 +308,7 @@ def main(page: ft.Page):    # check if no mouse click from the user
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "NL",
+                                                    data = "nl",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                                 ft.OutlinedButton(
@@ -353,7 +345,7 @@ def main(page: ft.Page):    # check if no mouse click from the user
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "FR",
+                                                    data = "fr",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                             ],
@@ -622,9 +614,9 @@ def main(page: ft.Page):    # check if no mouse click from the user
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Running demo welcome page')
-    parser.add_argument('--id', required=True, help='the Scrapi API ID of the demo')
+    parser.add_argument('--id', required=True, help='the Directus demo ID')
     args = parser.parse_args()
-    STRAPI_ID = int(args.id)
+    DEMO_ID = int(args.id)
 
-    ft.app(target=main,  view=ft.WEB_BROWSER, port=8550, assets_dir="assets")
+    ft.app(target=main, view=ft.WEB_BROWSER, port=8550, assets_dir="assets")
     
