@@ -62,38 +62,40 @@ def main(page: ft.Page):
             return
             
         response_json = response.json()
-        demo_content = next((demo for demo in response_json['data'] if demo['id'] == DEMO_ID), None)
         
+        demo_content = next((demo for demo in response_json['data'] if demo['id'] == DEMO_ID), None)
         if not demo_content:
             print(f"Demo with ID {DEMO_ID} not found")
             return
 
         # Update text content based on language
         translations = demo_content.get('translations', [])
+        print(language)
         current_translation = next((t for t in translations if t['languages_code'] == language), None)
         
         if current_translation:
             txt_title.value = current_translation.get('title', '')
             txt_title_w.value = current_translation.get('title', '')
             txt_topic.value = current_translation.get('topic', '')
-            txt_explain1.value = current_translation.get('explanation_short', '')
-            txt_start_demo.value = current_translation.get('button_demo_start', '')
-            txt_explain2.value = current_translation.get('explanation', '')
-            txt_learnmore.text = current_translation.get('learn_more', '')
-            txt_research_head.value = current_translation.get('research_head', '')
-            txt_research_lead.value = current_translation.get('research_lead', '')
+            txt_explain1.value = current_translation.get('description', '')
+            txt_start_demo.value = "start demo"
+            txt_explain2.value = ""
+            txt_learnmore.text = "learn more"
+            txt_research_head.value = demo_content.get('research_head', '')
+            txt_research_lead.value = demo_content.get('research_lead', '')
 
         # Update app URL and images
-        appURL = demo_content.get('appURL', '')
-        
+        appURL = current_translation.get('app_url', '')
+        print(demo_content)
         # Handle main image
         if 'image' in demo_content and demo_content['image']:
-            imageURL = f"{DIRECTUS_URL}/assets/{demo_content['image']}"
-
+            imageURL = f"{DIRECTUS_URL}/assets/{demo_content['image']['id']}"
+            print(imageURL)
         # Handle carousel images
-        if len(lst_image_caroussel) == 0 and 'carousel' in demo_content:
-            for image_id in demo_content['carousel']:
-                carousel_img_url = f"{DIRECTUS_URL}/assets/{image_id}"
+        if 'logos' in demo_content:
+            for logo in demo_content['logos']:
+                carousel_img_url = f"{DIRECTUS_URL}/assets/{logo['directus_files_id']}"
+                print(carousel_img_url)
                 lst_image_caroussel.append(
                     ft.Container(
                         height=50,
@@ -108,9 +110,9 @@ def main(page: ft.Page):
                 )
 
         # Handle SDG images
-        if len(lst_image_sdg) == 0 and 'images_sdg' in demo_content:
-            for image_id in demo_content['images_sdg']:
-                sdg_img_url = f"{DIRECTUS_URL}/assets/{image_id}"
+        if 'sdg_images' in demo_content:
+            for sdg in demo_content['sdg_images']:
+                sdg_img_url = f"{DIRECTUS_URL}/assets/{sdg['directus_files_id']}"
                 lst_image_sdg.append(
                     ft.Image(
                         src=sdg_img_url,
@@ -269,7 +271,7 @@ def main(page: ft.Page):
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "EN",
+                                                    data = "en",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                                 ft.OutlinedButton(
@@ -306,7 +308,7 @@ def main(page: ft.Page):
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "NL",
+                                                    data = "nl",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                                 ft.OutlinedButton(
@@ -343,7 +345,7 @@ def main(page: ft.Page):
                                                             ft.MaterialState.DEFAULT: RoundedRectangleBorder(radius=50),
                                                         },
                                                     ),
-                                                    data = "FR",
+                                                    data = "fr",
                                                     on_click=lambda e: home(e.control.data),
                                                 ),
                                             ],
